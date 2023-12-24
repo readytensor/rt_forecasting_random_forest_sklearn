@@ -27,8 +27,8 @@ class Forecaster:
             decode_len:int,
             n_estimators: Optional[int] = 50,
             max_depth: Optional[int] = 10,
-            min_samples_split: Optional[int] = 8,
-            min_samples_leaf: Optional[int] = 4,
+            min_samples_split: Optional[int] = 4,
+            min_samples_leaf: Optional[int] = 2,
             **kwargs
         ):
         """
