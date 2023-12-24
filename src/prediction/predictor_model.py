@@ -26,6 +26,7 @@ class Forecaster:
             encode_len:int,
             decode_len:int,
             n_estimators: Optional[int] = 50,
+            max_depth: Optional[int] = 10,
             min_samples_split: Optional[int] = 8,
             min_samples_leaf: Optional[int] = 4,
             **kwargs
@@ -36,6 +37,10 @@ class Forecaster:
         Args:
             encode_len (int): Encoding (history) length.
             decode_len (int): Decoding (forecast window) length.
+            max_depth (int, optional): The maximum depth of the tree. 
+                If None, then nodes are expanded until all leaves are pure or until
+                all leaves contain less than min_samples_split samples
+                Defaults to 10.
             n_estimators (int, optional): The number of trees in the forest.
                 Defaults to 50.
             min_samples_split (int, optional): The minimum number of samples required
@@ -48,6 +53,7 @@ class Forecaster:
         self.encode_len = int(encode_len)
         self.decode_len = int(decode_len)
         self.n_estimators = int(n_estimators)
+        self.max_depth = int(max_depth)
         self.min_samples_split = int(min_samples_split)
         self.min_samples_leaf = int(min_samples_leaf)
         self.model = self.build_model()
@@ -57,6 +63,7 @@ class Forecaster:
         """Build a new Random Forest regressor."""
         model = RandomForestRegressor(
             n_estimators=self.n_estimators,
+            max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
             min_samples_leaf=self.min_samples_leaf,
             random_state=0,
@@ -131,6 +138,7 @@ class Forecaster:
     def __str__(self):
         return (
             f"Model name: {self.MODEL_NAME} ("
+            f"max_depth: {self.max_depth}, "
             f"min_samples_leaf: {self.min_samples_leaf}, "
             f"min_samples_split: {self.min_samples_split}, "
             f"n_estimators: {self.n_estimators})"
