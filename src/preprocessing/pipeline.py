@@ -66,7 +66,7 @@ def create_preprocess_pipelines(
         ("window_generator", transformers.TimeSeriesWindowGenerator(
             window_size=encode_len+data_schema.forecast_length,
             stride=1,
-            max_windows=10000
+            max_windows=preprocessing_config["max_windows"],
         )),
         ("left_right_flipper", transformers.LeftRightFlipper(
             axis_to_flip=1

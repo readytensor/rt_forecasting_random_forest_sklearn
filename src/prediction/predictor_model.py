@@ -25,9 +25,9 @@ class Forecaster:
             self,
             encode_len:int,
             decode_len:int,
-            n_estimators: Optional[int] = 250,
-            min_samples_split: Optional[int] = 2,
-            min_samples_leaf: Optional[int] = 1,
+            n_estimators: Optional[int] = 50,
+            min_samples_split: Optional[int] = 8,
+            min_samples_leaf: Optional[int] = 4,
             **kwargs
         ):
         """
@@ -37,13 +37,13 @@ class Forecaster:
             encode_len (int): Encoding (history) length.
             decode_len (int): Decoding (forecast window) length.
             n_estimators (int, optional): The number of trees in the forest.
-                Defaults to 100.
+                Defaults to 50.
             min_samples_split (int, optional): The minimum number of samples required
                 to split an internal node.
-                Defaults to 2.
+                Defaults to 8.
             min_samples_leaf (int, optional): The minimum number of samples required
                 to be at a leaf node.
-                Defaults to 1.        
+                Defaults to 4.        
         """
         self.encode_len = int(encode_len)
         self.decode_len = int(decode_len)
