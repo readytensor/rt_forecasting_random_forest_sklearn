@@ -45,10 +45,10 @@ class Forecaster:
                 Defaults to 50.
             min_samples_split (int, optional): The minimum number of samples required
                 to split an internal node.
-                Defaults to 8.
+                Defaults to 4.
             min_samples_leaf (int, optional): The minimum number of samples required
                 to be at a leaf node.
-                Defaults to 4.        
+                Defaults to 2.        
         """
         self.encode_len = int(encode_len)
         self.decode_len = int(decode_len)
