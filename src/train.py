@@ -110,13 +110,36 @@ def run_training(
         logger.info("Saving pipelines...")
         save_pipelines(trained_pipeline, inference_pipeline, preprocessing_dir_path)
 
-        # # use default hyperparameters to train model
-        logger.info("Training forecaster...")
-        forecaster = train_predictor_model(
-            train_data=transformed_data,
-            forecast_length=data_schema.forecast_length,
-            hyperparameters=default_hyperparameters
-        )
+        # hyperparameter tuning + training the model
+        if run_tuning:
+            logger.info("Tuning hyperparameters...")
+            train_split, valid_split = train_test_split(
+                transformed_data,
+                test_split=model_config["validation_split"]
+            )
+            tuned_hyperparameters = tune_hyperparameters(
+                train_split=train_split,
+                valid_split=valid_split,
+                forecast_length=data_schema.forecast_length,
+                hpt_results_dir_path=hpt_results_dir_path,
+                is_minimize=False, # scoring metric is r-squared - so maximize it.
+                default_hyperparameters_file_path=default_hyperparameters_file_path,
+                hpt_specs_file_path=hpt_specs_file_path,
+            )
+            logger.info("Training forecaster...")
+            forecaster = train_predictor_model(
+                train_data=transformed_data,
+                forecast_length=data_schema.forecast_length,
+                hyperparameters=tuned_hyperparameters,
+            )
+        else:
+            # # use default hyperparameters to train model
+            logger.info("Training forecaster...")
+            forecaster = train_predictor_model(
+                train_data=transformed_data,
+                forecast_length=data_schema.forecast_length,
+                hyperparameters=default_hyperparameters
+            )
 
         # save predictor model
         logger.info("Saving forecaster...")
