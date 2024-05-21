@@ -1,5 +1,5 @@
 import argparse
-
+import numpy as np
 from config import paths
 from data_models.data_validator import validate_data
 from hyperparameter_tuning.tuner import tune_hyperparameters
@@ -116,6 +116,8 @@ def run_training(
                 train_split, valid_split = train_test_split(
                     transformed_data, test_split=model_config["validation_split"]
                 )
+                train_split = np.expand_dims(train_split, axis=0)
+                valid_split = np.expand_dims(valid_split, axis=0)
                 tuned_hyperparameters = tune_hyperparameters(
                     train_split=train_split,
                     valid_split=valid_split,
