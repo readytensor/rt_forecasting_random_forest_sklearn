@@ -16,7 +16,7 @@ class ForecastingSchema:
     This class allows users to work with a generic schema for forecaster
     problems, enabling them to create algorithm implementations that are not hardcoded
     to specific feature names. The class provides methods to retrieve information about
-    the schema, such as the ID field, target field, time field (if provided), and 
+    the schema, such as the ID field, target field, time field (if provided), and
     exogenous fields (if provided). This makes it easier to preprocess and manipulate
     the input data according to the schema, regardless of the specific dataset used.
     """
@@ -208,8 +208,7 @@ class ForecastingSchema:
         Returns:
             List[str]: The list of fields.
         """
-        return [self.id_col, self.time_col, self.target] + \
-            self.covariates
+        return [self.id_col, self.time_col, self.target] + self.covariates
 
     @property
     def id_col(self) -> str:
@@ -331,9 +330,11 @@ class ForecastingSchema:
         Raises:
             ValueError: If the covariate is not found in the schema.
         """
-        covariates = self.schema["pastCovariates"] \
-            + self.schema["futureCovariates"] \
+        covariates = (
+            self.schema["pastCovariates"]
+            + self.schema["futureCovariates"]
             + self.schema["staticCovariates"]
+        )
         for covariate in covariates:
             if covariate["name"] == covariate_name:
                 return covariate

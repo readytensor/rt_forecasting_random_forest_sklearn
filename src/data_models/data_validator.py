@@ -4,6 +4,7 @@ from pydantic import BaseModel, validator
 
 from schema.data_schema import ForecastingSchema
 from data_models.schema_validator import TimeDataType
+from typing import List
 
 
 def get_data_validator(schema: ForecastingSchema, is_train: bool) -> BaseModel:
@@ -51,9 +52,7 @@ def get_data_validator(schema: ForecastingSchema, is_train: bool) -> BaseModel:
 
             # Check for null values in the 'id' column
             if data[id_col].isna().any():
-                raise ValueError(
-                    f"The ID field '{id_col}' contains null values."
-                )
+                raise ValueError(f"The ID field '{id_col}' contains null values.")
 
             if time_col not in data.columns:
                 raise ValueError(
@@ -62,9 +61,7 @@ def get_data_validator(schema: ForecastingSchema, is_train: bool) -> BaseModel:
 
             # Check for null values in the 'id' column
             if data[time_col].isna().any():
-                raise ValueError(
-                    f"The Time field '{time_col}' contains null values."
-                )
+                raise ValueError(f"The Time field '{time_col}' contains null values.")
 
             # Check if all time column values are integers
             if time_col_dtype == TimeDataType.INT:
@@ -78,7 +75,9 @@ def get_data_validator(schema: ForecastingSchema, is_train: bool) -> BaseModel:
             elif time_col_dtype == TimeDataType.DATE:
                 # Check if all values match the DATE format '%Y-%m-%d'
                 if not all(
-                    pd.to_datetime(data[time_col], format='%Y-%m-%d', errors='coerce').notna()
+                    pd.to_datetime(
+                        data[time_col], format="%Y-%m-%d", errors="coerce"
+                    ).notna()
                 ):
                     raise ValueError(
                         f"The time column '{time_col}' must be in '%Y-%m-%d' format."
@@ -87,15 +86,21 @@ def get_data_validator(schema: ForecastingSchema, is_train: bool) -> BaseModel:
             elif time_col_dtype == TimeDataType.DATETIME:
                 # Check if all values match either of the DATETIME formats
                 if not all(
-                    pd.to_datetime(data[time_col], format='%Y-%m-%d %H:%M:%S', errors='coerce').notna() |
-                    pd.to_datetime(data[time_col], format='%Y-%m-%d %H-:M:%S.%f', errors='coerce').notna()
+                    pd.to_datetime(
+                        data[time_col], format="%Y-%m-%d %H:%M:%S", errors="coerce"
+                    ).notna()
+                    | pd.to_datetime(
+                        data[time_col], format="%Y-%m-%d %H-:M:%S.%f", errors="coerce"
+                    ).notna()
                 ):
                     raise ValueError(
                         f"The time column '{time_col}' must be in '%Y-%m-%d %H:%M:%S'"
                         " or '%Y-%m-%d %H:%M:%S.%f' format."
                     )
             else:
-                raise ValueError(f"Unsupported time column data type: '{time_col_dtype}'")
+                raise ValueError(
+                    f"Unsupported time column data type: '{time_col_dtype}'"
+                )
 
             # Check for duplicates in the combination of id and time col
             if data.duplicated(subset=[id_col, time_col]).any():
@@ -115,8 +120,7 @@ def get_data_validator(schema: ForecastingSchema, is_train: bool) -> BaseModel:
             if is_train:
                 if target not in data.columns:
                     raise ValueError(
-                        f"Target field '{target}' is missing "
-                        "in the given data"
+                        f"Target field '{target}' is missing " "in the given data"
                     )
 
                 if not all(data[target].apply(lambda x: pd.isnull(x) or np.isreal(x))):
@@ -173,3 +177,17 @@ def validate_data(
         return validated_data.data
     except ValueError as exc:
         raise ValueError(f"Data validation failed: {str(exc)}") from exc
+
+
+def validate_multiple_datasets(
+    data: List[pd.DataFrame], data_schema: List[ForecastingSchema], is_train: bool
+) -> List[pd.DataFrame]:
+    results = []
+    for d, s in zip(data, data_schema):
+        DataValidator = get_data_validator(s, is_train)
+        try:
+            validated_data = DataValidator(data=d)
+            results.append(validated_data.data)
+        except ValueError as exc:
+            raise ValueError(f"Data validation failed: {str(exc)}") from exc
+    return results

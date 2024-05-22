@@ -20,6 +20,8 @@ DATA_DIR = os.path.join(INPUT_DIR, "data")
 TRAIN_DIR = os.path.join(DATA_DIR, "training")
 # Path to test directory inside data directory
 TEST_DIR = os.path.join(DATA_DIR, "testing")
+# Path to tuning directory inside data directory
+TUNE_DIR = os.path.join(DATA_DIR, "tuning")
 
 # Path to model directory
 MODEL_PATH = os.path.join(MODEL_INPUTS_OUTPUTS, "model")
@@ -63,3 +65,11 @@ DEFAULT_HYPERPARAMETERS_FILE_PATH = os.path.join(
 )
 # Path to hyperparameter tuning config file
 HPT_CONFIG_FILE_PATH = os.path.join(CONFIG_DIR, "hpt.json")
+# Path to default datasets directory inside tuning directory
+DEFAULT_TUNING_DATASETS_DIR = os.path.join(TUNE_DIR, "default_datasets")
+# Path to user datasets directory inside tuning directory
+USER_TUNING_DATASETS_DIR = os.path.join(TUNE_DIR, "user_datasets")
+
+TUNED_HYPERPARAMETERS_FILE_PATH = os.path.join(
+    MODEL_ARTIFACTS_PATH, "tuned_parameters.json"
+)

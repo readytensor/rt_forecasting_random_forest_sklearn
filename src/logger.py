@@ -13,14 +13,14 @@ def get_logger(task_name: str) -> logging.Logger:
         logging.Logger: A logger object with the specified handlers.
     """
     logger = logging.getLogger(task_name)
-    logger.setLevel(logging.INFO)
-
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
+    if not logger.handlers:
+        logger.setLevel(logging.INFO)
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+        logger.propagate = False
 
     return logger
 
@@ -39,9 +39,7 @@ def log_error(message: str, error: Exception, error_fpath: str) -> None:
         file.write(err_msg)
         file.write("\n")
         traceback_msg = "".join(
-            traceback.format_exception(
-                type(error), value=error, tb=error.__traceback__
-            )
+            traceback.format_exception(type(error), value=error, tb=error.__traceback__)
         )
         file.write(traceback_msg)
 

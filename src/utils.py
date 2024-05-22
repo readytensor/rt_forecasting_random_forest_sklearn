@@ -5,9 +5,9 @@ import time
 import threading
 import psutil
 import tracemalloc
-from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 import pandas as pd
+from typing import Any, Dict, List, Tuple, Union
 
 
 def read_json_as_dict(input_path: str) -> Dict:
@@ -85,6 +85,21 @@ def read_csv_in_directory(file_dir_path: str) -> pd.DataFrame:
     return df
 
 
+def read_tuning_datasets(tuning_dir_path: str) -> List[pd.DataFrame]:
+    results = []
+    datasets = [
+        i
+        for i in os.listdir(tuning_dir_path)
+        if os.path.isdir(os.path.join(tuning_dir_path, i))
+    ]
+
+    datasets_paths = [os.path.join(tuning_dir_path, dataset) for dataset in datasets]
+    for path in datasets_paths:
+        data = read_csv_in_directory(path)
+        results.append(data)
+    return results
+
+
 def cast_time_col(data: pd.DataFrame, time_col: str, dtype: str) -> pd.DataFrame:
     """_summary_
 
@@ -124,46 +139,6 @@ def set_seeds(seed_value: int) -> None:
         np.random.seed(seed_value)
     else:
         raise ValueError(f"Invalid seed value: {seed_value}. Cannot set seeds.")
-
-
-def split_train_val_by_series(
-    data: pd.DataFrame, val_pct: float, id_col: str
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Splits the input time-series data into training and validation sets based on the
-    percentage of series. All data points from the same series are kept together.
-
-    Args:
-        data (pd.DataFrame): The input data as a DataFrame.
-        val_pct (float): The percentage of series to be used for the validation set.
-        id_col (str): The name of the column containing series ids.
-
-    Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: A tuple containing the training and
-            validation sets as DataFrames.
-    """
-    # Ensure the percentage is between 0 and 1
-    if not 0 <= val_pct <= 1:
-        raise ValueError("val_pct must be between 0 and 1")
-
-    # Get unique series IDs
-    series_ids = data[id_col].unique()
-
-    # Shuffle series IDs
-    shuffled_series_ids = np.random.permutation(series_ids)
-
-    # Calculate the split index
-    split_idx = int(len(shuffled_series_ids) * (1 - val_pct))
-
-    # Split series IDs into train and validation sets
-    train_series_ids = shuffled_series_ids[:split_idx]
-    val_series_ids = shuffled_series_ids[split_idx:]
-
-    # Split the data based on series IDs
-    train_data = data[data[id_col].isin(train_series_ids)]
-    val_data = data[data[id_col].isin(val_series_ids)]
-
-    return train_data, val_data
 
 
 def train_test_split(
@@ -226,22 +201,6 @@ def save_dataframe_as_csv(dataframe: pd.DataFrame, file_path: str) -> None:
         dataframe.to_csv(file_path, index=False, float_format="%.4f")
     except IOError as exc:
         raise IOError(f"Error saving CSV file: {exc}") from exc
-
-
-def clear_files_in_directory(directory_path: str) -> None:
-    """
-    Clears all files in the given directory path.
-
-    Args:
-    - directory_path (str): The path to the directory containing the files
-        to be cleared.
-
-    Returns:
-    - None
-    """
-    for file in os.listdir(directory_path):
-        file_path = os.path.join(directory_path, file)
-        os.remove(file_path)
 
 
 def save_json(file_path_and_name: str, data: Any) -> None:

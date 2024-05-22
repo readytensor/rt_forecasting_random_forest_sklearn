@@ -1,8 +1,6 @@
-import argparse
-import numpy as np
+import os
 from config import paths
 from data_models.data_validator import validate_data
-from hyperparameter_tuning.tuner import tune_hyperparameters
 from logger import get_logger, log_error
 from prediction.predictor_model import (
     save_predictor_model,
@@ -18,7 +16,6 @@ from utils import (
     read_csv_in_directory,
     read_json_as_dict,
     set_seeds,
-    train_test_split,
     ResourceTracker,
 )
 
@@ -34,9 +31,7 @@ def run_training(
     preprocessing_dir_path: str = paths.PREPROCESSING_DIR_PATH,
     predictor_dir_path: str = paths.PREDICTOR_DIR_PATH,
     default_hyperparameters_file_path: str = paths.DEFAULT_HYPERPARAMETERS_FILE_PATH,
-    run_tuning: bool = False,
-    hpt_specs_file_path: str = paths.HPT_CONFIG_FILE_PATH,
-    hpt_results_dir_path: str = paths.HPT_OUTPUTS_DIR,
+    tuned_hyperparameters_file_path: str = paths.TUNED_HYPERPARAMETERS_FILE_PATH,
 ) -> None:
     """
     Run the training process and saves model artifacts
@@ -51,11 +46,8 @@ def run_training(
             predictor model.
         default_hyperparameters_file_path (str, optional): The path of the default
             hyperparameters file.
-        run_tuning (bool, optional): Whether to run hyperparameter tuning.
-            Default is False.
-        hpt_specs_file_path (str, optional): The path of the configuration file for
-            hyperparameter tuning.
-        hpt_results_dir_path (str, optional): Dir path where to save the HPT results.
+        tuned_hyperparameters_file_path (str, optional): The path of the tuned
+            hyperparameters file.
     Returns:
         None
     """
@@ -91,9 +83,12 @@ def run_training(
 
             # use default hyperparameters to train model
             logger.info("Loading hyperparameters...")
-            default_hyperparameters = read_json_as_dict(
-                default_hyperparameters_file_path
+            hyperparameters_file_path = (
+                tuned_hyperparameters_file_path
+                if os.path.exists(tuned_hyperparameters_file_path)
+                else default_hyperparameters_file_path
             )
+            hyperparameters = read_json_as_dict(hyperparameters_file_path)
 
             # fit and transform using pipeline and target encoder, then save them
             logger.info("Training preprocessing pipeline...")
@@ -102,7 +97,7 @@ def run_training(
                     data_schema,
                     validated_data,
                     preprocessing_config,
-                    default_hyperparameters,
+                    hyperparameters,
                 )
             )
             trained_pipeline, transformed_data = fit_transform_with_pipeline(
@@ -110,38 +105,13 @@ def run_training(
             )
             logger.info(f"Transformed training data shape: {transformed_data.shape}")
 
-            # hyperparameter tuning + training the model
-            if run_tuning:
-                logger.info("Tuning hyperparameters...")
-                train_split, valid_split = train_test_split(
-                    transformed_data, test_split=model_config["validation_split"]
-                )
-                train_split = np.expand_dims(train_split, axis=0)
-                valid_split = np.expand_dims(valid_split, axis=0)
-                tuned_hyperparameters = tune_hyperparameters(
-                    train_split=train_split,
-                    valid_split=valid_split,
-                    forecast_length=data_schema.forecast_length,
-                    hpt_results_dir_path=hpt_results_dir_path,
-                    is_minimize=False,  # scoring metric is r-squared - so maximize it.
-                    default_hyperparameters_file_path=default_hyperparameters_file_path,
-                    hpt_specs_file_path=hpt_specs_file_path,
-                )
-                logger.info("Training forecaster...")
-                forecaster = train_predictor_model(
-                    train_data=transformed_data,
-                    forecast_length=data_schema.forecast_length,
-                    hyperparameters=tuned_hyperparameters,
-                )
-            else:
-                # # use default hyperparameters to train model
-                logger.info("Training forecaster...")
+            logger.info("Training forecaster...")
 
-                forecaster = train_predictor_model(
-                    train_data=transformed_data,
-                    forecast_length=data_schema.forecast_length,
-                    hyperparameters=default_hyperparameters,
-                )
+            forecaster = train_predictor_model(
+                train_data=transformed_data,
+                forecast_length=data_schema.forecast_length,
+                hyperparameters=hyperparameters,
+            )
 
         # Save pipelines
         logger.info("Saving pipelines...")
@@ -161,22 +131,5 @@ def run_training(
         raise Exception(f"{err_msg} Error: {str(exc)}") from exc
 
 
-def parse_arguments() -> argparse.Namespace:
-    """Parse the command line argument that indicates if user wants to run
-    hyperparameter tuning."""
-    parser = argparse.ArgumentParser(description="Train a binary classification model.")
-    parser.add_argument(
-        "-t",
-        "--tune",
-        action="store_true",
-        help=(
-            "Run hyperparameter tuning before training the model. "
-            + "If not set, use default hyperparameters.",
-        ),
-    )
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = parse_arguments()
-    run_training(run_tuning=args.tune)
+    run_training()

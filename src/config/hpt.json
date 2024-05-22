@@ -1,5 +1,5 @@
 {
-  "num_trials": 20,
+  "num_trials": 5,
   "hyperparameters": [
     {
       "name": "n_estimators",
@@ -24,6 +24,15 @@
       "search_type": "uniform",
       "range_low": 1,
       "range_high": 5
+    },
+    {
+      "name":"encode_to_decode_ratio",
+      "short_desc":"The ratio of the number of input time steps to the number of output time steps.",
+      "type":"int",
+      "search_type":"uniform",
+      "range_low":3,
+      "range_high":6
+
     }
   ]
 }

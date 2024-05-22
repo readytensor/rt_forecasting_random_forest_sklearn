@@ -1,13 +1,17 @@
 import math
 import os
 from typing import Any, Callable, Dict
-
 import numpy as np
 import optuna
 from config import paths
 from logger import get_logger
 from prediction.predictor_model import evaluate_predictor_model, train_predictor_model
-from utils import read_json_as_dict, save_dataframe_as_csv
+from utils import read_json_as_dict, save_dataframe_as_csv, train_test_split
+from tqdm import tqdm
+from preprocessing.preprocess import (
+    get_preprocessing_pipelines,
+    fit_transform_with_pipeline,
+)
 
 HPT_RESULTS_FILE_NAME = "HPT_results.csv"
 
@@ -78,22 +82,26 @@ class HyperParameterTuner:
 
     def run_hyperparameter_tuning(
         self,
-        train_split: np.ndarray,
-        valid_split: np.ndarray,
-        forecast_length: int,
+        validated_data: np.ndarray,
+        data_schemas,
+        preprocessing_config,
+        model_config,
     ) -> Dict[str, Any]:
         """Runs the hyperparameter tuning process.
 
         Args:
-            train_split (np.ndarray): Training data split.
-            valid_split (np.ndarray): Validation data split.
+            train_splits (np.ndarray): Training data splits.
+            valid_splits (np.ndarray): Validation data splits.
             forecast_length (int): Forecast length.
 
         Returns:
             A dictionary containing the best model name, hyperparameters, and score.
         """
         objective_func = self._get_objective_func(
-            train_split, valid_split, forecast_length
+            validated_data,
+            data_schemas,
+            preprocessing_config,
+            model_config,
         )
         self.study.optimize(
             # the objective function to minimize
@@ -113,9 +121,10 @@ class HyperParameterTuner:
 
     def _get_objective_func(
         self,
-        train_split: np.ndarray,
-        valid_split: np.ndarray,
-        forecast_length: int,
+        validated_data: list,
+        data_schemas,
+        preprocessing_config,
+        model_config,
     ) -> Callable:
         """Gets the objective function for hyperparameter tuning.
 
@@ -133,16 +142,35 @@ class HyperParameterTuner:
             its performance"""
             # extra hyperparameters from trial
             scores = []
-            for train_data, valid_data in zip(train_split, valid_split):
-                hyperparameters = self._extract_hyperparameters_from_trial(trial)
+            hyperparameters = self._extract_hyperparameters_from_trial(trial)
+            for k, v in self.default_hyperparameters.items():
+                if k not in hyperparameters:
+                    hyperparameters[k] = v
+            for data, data_schema in zip(validated_data, data_schemas):
+                training_pipeline, inference_pipeline, encode_len = (
+                    get_preprocessing_pipelines(
+                        data_schema,
+                        data,
+                        preprocessing_config,
+                        hyperparameters,
+                    )
+                )
+                _, transformed_data = fit_transform_with_pipeline(
+                    training_pipeline, data
+                )
+
+                train_split, valid_split = train_test_split(
+                    transformed_data, test_split=model_config["validation_split"]
+                )
+
                 # train model
                 classifier = train_predictor_model(
-                    train_data=train_data,
-                    forecast_length=forecast_length,
+                    train_data=train_split,
+                    forecast_length=data_schema.forecast_length,
                     hyperparameters=hyperparameters,
                 )
                 # evaluate the model
-                score = round(evaluate_predictor_model(classifier, valid_data), 6)
+                score = round(evaluate_predictor_model(classifier, valid_split), 6)
                 if np.isnan(score) or math.isinf(score):
                     # sometimes loss becomes inf/na, so use a large "bad" value
                     score = 1.0e6 if self.is_minimize else -1.0e6
@@ -212,18 +240,19 @@ class HyperParameterTuner:
 
 
 def tune_hyperparameters(
-    train_split: np.ndarray,
-    valid_split: np.ndarray,
-    forecast_length: int,
+    validated_data: list,
+    data_schemas,
+    preprocessing_config,
+    model_config,
     hpt_results_dir_path: str,
     is_minimize: bool = True,
     default_hyperparameters_file_path: str = paths.DEFAULT_HYPERPARAMETERS_FILE_PATH,
     hpt_specs_file_path: str = paths.HPT_CONFIG_FILE_PATH,
 ) -> Dict[str, Any]:
     """
-    Tune hyperparameters using Scikit-Optimize (SKO) hyperparameter tuner.
+    Tune hyperparameters using Optuna hyperparameter tuner.
 
-    This function creates an instance of the SKOHyperparameterTuner with the
+    This function creates an instance of the Optuna tuner with the
     provided hyperparameters and tuning specifications, then runs the hyperparameter
     tuning process and returns the best hyperparameters.
 
@@ -242,6 +271,9 @@ def tune_hyperparameters(
         is_minimize=is_minimize,
     )
     best_hyperparams = hyperparameter_tuner.run_hyperparameter_tuning(
-        train_split, valid_split, forecast_length
+        validated_data,
+        data_schemas,
+        preprocessing_config,
+        model_config,
     )
     return best_hyperparams
