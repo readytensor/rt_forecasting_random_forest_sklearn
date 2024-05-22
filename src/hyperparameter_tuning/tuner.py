@@ -7,7 +7,6 @@ from config import paths
 from logger import get_logger
 from prediction.predictor_model import evaluate_predictor_model, train_predictor_model
 from utils import read_json_as_dict, save_dataframe_as_csv, train_test_split
-from tqdm import tqdm
 from preprocessing.preprocess import (
     get_preprocessing_pipelines,
     fit_transform_with_pipeline,
@@ -16,7 +15,6 @@ from preprocessing.preprocess import (
 HPT_RESULTS_FILE_NAME = "HPT_results.csv"
 
 logger = get_logger(task_name="tune")
-# logger = optuna.logging.get_logger(__name__)
 
 
 def logger_callback(study: optuna.study.Study, trial: optuna.trial.FrozenTrial) -> None:
