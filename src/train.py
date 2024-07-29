@@ -1,5 +1,4 @@
 import argparse
-import time
 
 from config import paths
 from data_models.data_validator import validate_data
@@ -20,7 +19,7 @@ from utils import (
     read_json_as_dict,
     set_seeds,
     train_test_split,
-    TimeAndMemoryTracker,
+    ResourceTracker,
 )
 
 logger = get_logger(task_name="train")
@@ -62,7 +61,7 @@ def run_training(
     """
 
     try:
-        with TimeAndMemoryTracker(logger) as _:
+        with ResourceTracker(logger, monitoring_interval=0.1):
             logger.info("Starting training...")
             # load and save schema
             logger.info("Loading and saving schema...")
